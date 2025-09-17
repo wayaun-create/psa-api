@@ -29,3 +29,31 @@ const port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log('API up on port ' + port);
 });
+
+//
+// simple in-memory seed for now (replace with DB later)
+const PARCELS = [
+  { id: 'demo-1', parcelNumber: '001A-0001', county: 'Butts', status: 'research' },
+  { id: 'demo-2', parcelNumber: '001A-0002', county: 'Butts', status: 'noticed' },
+];
+
+// Logging middleware
+app.use((req, res, next) => {
+  const t0 = Date.now();
+  res.on('finish', () => console.log(`${req.method} ${req.url} ${res.statusCode} ${Date.now()-t0}ms`));
+  next();
+});
+
+// GET /v1/parcels with pagination
+app.get('/v1/parcels', (req, res) => {
+  const limit = Math.min(parseInt(req.query.limit || '20', 10), 100);
+  const cursor = req.query.cursor || null;
+  let start = 0;
+  if (cursor) {
+    const idx = PARCELS.findIndex(p => p.id === cursor);
+    start = idx >= 0 ? idx + 1 : 0;
+  }
+  const slice = PARCELS.slice(start, start + limit);
+  const nextCursor = (start + limit) < PARCELS.length ? PARCELS[start + limit - 1].id : null;
+  res.json({ items: slice, nextCursor });
+});
